@@ -1,0 +1,96 @@
+/* Стили для плагина Dynamic Price с порогами тиража */
+
+/* Иконка информации */
+.tirazh-info-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    margin-left: 10px;
+    cursor: pointer;
+    font-style: normal;
+    font-size: 12px;
+}
+
+/* Модальное окно */
+.tirazh-popup {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.tirazh-popup-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 10px 20px 20px 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+}
+
+.tirazh-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.tirazh-popup-header h4 {
+    margin: 0;
+}
+
+.tirazh-popup-close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.tirazh-popup-close:hover {
+    color: black;
+}
+
+/* Таблица тиражей */
+.tirazh-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tirazh-table th, 
+.tirazh-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.tirazh-table th {
+    background-color: #f2f2f2;
+}
+
+/* Стили для блоков с ценами */
+.dynamic-price-info {
+    margin-top: 15px;
+}
+
+.dynamic-price-label {
+    font-weight: bold;
+}
+
+.dynamic-price-total {
+    position: relative;
+}
+
+.dynamic-price-discount-block {
+    color: #d9534f;
+}
