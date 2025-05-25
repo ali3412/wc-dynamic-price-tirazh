@@ -19,6 +19,117 @@ class WC_Dynamic_Price_Price_Formatter {
         // Фильтры для корректного отображения цен в корзине
         add_filter('woocommerce_cart_item_price', array($this, 'filter_cart_item_price'), 99, 3);
         add_filter('woocommerce_cart_item_subtotal', array($this, 'filter_cart_item_subtotal'), 99, 3);
+        
+        // Фильтры для отображения скидки на странице товара
+        add_filter('woocommerce_get_price_html', array($this, 'display_discount_on_product_page'), 99, 2);
+        
+        // Выводим логи при загрузке класса
+        error_log('[DEBUG] WC_Dynamic_Price_Price_Formatter инициализирован, хуки добавлены');
+    }
+    
+    /**
+     * Отображает скидку на странице товара
+     * 
+     * @param string $price_html Оригинальный HTML цены
+     * @param object $product Объект товара
+     * @return string Отформатированный HTML цены
+     */
+    public function display_discount_on_product_page($price_html, $product) {
+        // Добавляем логи для отслеживания вызовов
+        error_log("[DEBUG] display_discount_on_product_page вызван для товара #{$product->get_id()}, тип: {$product->get_type()}");
+        
+        // Проверяем, является ли это вариацией и находимся ли мы на странице товара
+        if (!$product->is_type('variation') || !is_product()) {
+            error_log("[DEBUG] display_discount_on_product_page: не вариация или не страница товара, возвращаем стандартный формат");
+            return $price_html;
+        }
+
+        // Создаем экземпляр калькулятора цен
+        $price_calculator = new WC_Dynamic_Price_Calculator();
+        
+        // Получаем ID вариации
+        $variation_id = $product->get_id();
+        
+        // Проверяем, имеет ли товар цены по тиражам
+        if (!$price_calculator->has_tiered_pricing($variation_id)) {
+            error_log("[DEBUG] display_discount_on_product_page: у товара #{$variation_id} нет цен по тиражам, возвращаем стандартный формат");
+            return $price_html;
+        }
+        
+        error_log("[DEBUG] display_discount_on_product_page: у товара #{$variation_id} есть цены по тиражам");
+        
+        // Получаем базовую цену
+        $standard_price = floatval($product->get_regular_price('edit'));
+        if (empty($standard_price)) {
+            $standard_price = floatval($product->get_price('edit'));
+        }
+        
+        // Получаем минимальное количество
+        $minimum_quantity = $product->get_meta('_minimum_quantity', true);
+        $minimum_quantity = empty($minimum_quantity) ? 1 : absint($minimum_quantity);
+        
+        // Получаем все метаданные вариации
+        $all_meta = get_post_meta($variation_id);
+        
+        // Массивы для хранения порогов и цен
+        $thresholds = array();
+        $prices = array();
+        
+        // Перебираем метаданные и ищем поля с порогами тиража
+        foreach ($all_meta as $meta_key => $meta_value) {
+            // Проверяем, является ли это полем тиража
+            if (strpos($meta_key, '_price_tirazh_') === 0) {
+                // Извлекаем число порога из имени поля
+                $threshold = (int) str_replace('_price_tirazh_', '', $meta_key);
+                $price = (float) $meta_value[0]; // meta_value хранится как массив
+                
+                // Пропускаем нулевые цены
+                if ($price <= 0) {
+                    continue;
+                }
+                
+                $thresholds[] = $threshold;
+                $prices[] = $price;
+                
+                error_log("[DEBUG] display_discount_on_product_page: найден порог тиража {$threshold} с ценой {$price}");
+            }
+        }
+        
+        // Если нет порогов, вернем стандартный формат
+        if (empty($thresholds)) {
+            error_log("[DEBUG] display_discount_on_product_page: не найдено порогов тиража для вариации #{$variation_id}");
+            return $price_html;
+        }
+        
+        // Сортируем пороги и цены по возрастанию порогов
+        array_multisort($thresholds, SORT_ASC, $prices);
+        
+        // Получаем первый порог и его цену
+        $first_threshold = $thresholds[0];
+        $first_price = $prices[0];
+        
+        error_log("[DEBUG] display_discount_on_product_page: первый порог {$first_threshold}, цена {$first_price}, базовая цена {$standard_price}");
+        
+        // Рассчитываем процент скидки на основе первого порога
+        if ($standard_price > 0 && $first_price < $standard_price) {
+            $discount_percent = round((($standard_price - $first_price) / $standard_price) * 100);
+            
+            error_log("[DEBUG] display_discount_on_product_page: рассчитана скидка {$discount_percent}% для порога {$first_threshold}");
+            
+            // Формируем новый HTML с информацией о скидке
+            if ($discount_percent > 0) {
+                // Добавляем информацию о скидке
+                $price_html .= ' <span class="tirazh-discount">(скидка ' . $discount_percent . '% при тираже от ' . $first_threshold . ' шт.)</span>';
+                
+                error_log("[DEBUG] display_discount_on_product_page: добавлена информация о скидке в HTML");
+            } else {
+                error_log("[DEBUG] display_discount_on_product_page: нет скидки для отображения, процент скидки не положительный");
+            }
+        } else {
+            error_log("[DEBUG] display_discount_on_product_page: цена по тиражу не меньше стандартной, скидка не отображается");
+        }
+        
+        return $price_html;
     }
 
     /**
